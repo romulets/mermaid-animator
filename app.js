@@ -248,6 +248,14 @@ async function renderDiagram() {
     if (match) applyPreset(match, tag.preset, tag.config);
   });
 
+  // honor "Add signals flow to all" for any edge that didn't carry over a tag above
+  // (i.e. every edge on a first render, or newly added edges on a re-render)
+  if (els.signalFlowToggle.checked) {
+    registry
+      .filter((r) => r.kind === "edge" && r.preset === "none")
+      .forEach((r) => applyPreset(r, "signal", { count: 3, color: "#00bfb3" }));
+  }
+
   renderTagList();
   updateSignalFlowSection();
 }

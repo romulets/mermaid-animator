@@ -24,8 +24,22 @@
         <div class="source-editor-body">
           <pre id="source-highlight" class="source-highlight" aria-hidden="true"><code></code></pre>
           <textarea id="source" spellcheck="false">flowchart LR
-    A["Security Solution Default"] --> B["Entity Store"]
-    B --> C["entities-latest-default"]</textarea>
+  A1@{ shape: docs, label: "Something"}
+  A2@{ shape: docs, label: "Another one"}
+  B{{"connects"}}
+  C(["here"])
+
+  A1 --- B
+  A2 --- B
+
+  B --- C
+
+
+style B fill:#05bfb3,stroke:#FFF,color:#FFF
+style C stroke:#e1075f
+
+style A1 fill:#0d64dd,color:#FFF,stroke:#000
+style A2 fill:#0d64dd,color:#FFF,stroke:#000</textarea>
         </div>
       </div>
       <a id="doc-link" class="doc-link" href="https://mermaid.ai/open-source/syntax/flowchart.html" target="_blank" rel="noopener">Mermaid docs: Flowchart ↗</a>
