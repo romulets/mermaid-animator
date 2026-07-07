@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mermaid Animator</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>Mermaid Animator</h1>
+        <button id="color-picker-btn" class="icon-btn" title="Pick color from screen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 11.25 1.5 1.5.75-.75V8.758l2.276-.61a3 3 0 1 0-3.675-3.675l-.61 2.277H12l-.75.75 1.5 1.5M15 11.25l-8.47 8.47c-.34.34-.8.53-1.28.53s-.94.19-1.28.53l-.97.97-.75-.75.97-.97c.34-.34.53-.8.53-1.28s.19-.94.53-1.28L12.75 9M15 11.25 12.75 9"></path>
+          </svg>
+        </button>
+      </div>
+
+      <label class="field-label" for="source">Mermaid source</label>
+      <div class="source-editor">
+        <pre id="line-numbers" class="line-numbers" aria-hidden="true">1</pre>
+        <div class="source-editor-body">
+          <pre id="source-highlight" class="source-highlight" aria-hidden="true"><code></code></pre>
+          <textarea id="source" spellcheck="false">flowchart LR
+    A["Security Solution Default"] --> B["Entity Store"]
+    B --> C["entities-latest-default"]</textarea>
+        </div>
+      </div>
+      <a id="doc-link" class="doc-link" href="https://mermaid.ai/open-source/syntax/flowchart.html" target="_blank" rel="noopener">Mermaid docs: Flowchart ↗</a>
+      <button id="render-btn">Render</button>
+
+      <div class="divider"></div>
+
+      <h2>Tagged elements</h2>
+      <p class="hint">Click a node or edge in the canvas to tag it with an animation.</p>
+      <label id="signal-flow-section" class="checkbox-label hidden">
+        <input id="signal-flow-toggle" type="checkbox" />
+        Add signals flow to all
+      </label>
+      <ul id="tag-list" class="tag-list"></ul>
+    </aside>
+
+    <main class="canvas-wrap">
+      <div id="canvas-bg-toggle" class="bg-toggle">
+        <button data-bg="transparent" class="active">Transparent</button>
+        <button data-bg="light">Light</button>
+        <button data-bg="dark">Dark</button>
+      </div>
+      <div id="zoom-toolbar" class="zoom-toolbar">
+        <button id="zoom-out" title="Zoom out">−</button>
+        <span id="zoom-level">100%</span>
+        <button id="zoom-in" title="Zoom in">+</button>
+        <button id="zoom-reset" title="Reset zoom">Reset</button>
+      </div>
+      <div id="diagram-host" class="diagram-host"></div>
+
+      <div id="export-panel" class="export-panel">
+        <h2>Export</h2>
+        <label class="field-label" for="export-format">Format</label>
+        <select id="export-format">
+          <option value="apng" selected>APNG - best quality</option>
+          <option value="gif">GIF - max compatibility</option>
+        </select>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label" for="export-width">Width</label>
+            <input id="export-width" type="number" min="100" step="10" value="900" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="export-fps">FPS</label>
+            <input id="export-fps" type="number" min="5" max="30" step="1" value="20" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="cycle-duration">Cycle (ms)</label>
+            <input id="cycle-duration" type="number" min="500" step="100" value="2500" />
+          </div>
+        </div>
+
+        <label class="checkbox-label">
+          <input id="export-transparent" type="checkbox" checked />
+          Transparent background
+        </label>
+        <p id="format-hint" class="hint"></p>
+
+        <div class="button-row">
+          <button id="export-btn">Save Image</button>
+        </div>
+        <div id="export-status" class="hint"></div>
+
+        <div class="divider"></div>
+
+        <div class="button-row">
+          <button id="export-project-btn">⬇ Export</button>
+          <button id="import-project-btn">⬆ Import</button>
+        </div>
+        <input id="import-project-input" type="file" accept="application/json,.json" hidden />
+      </div>
+    </main>
+
+    <aside id="preset-picker" class="preset-picker hidden">
+      <div class="preset-picker-title">Animation for selection</div>
+      <div id="preset-picker-body" class="preset-picker-body"></div>
+      <button id="preset-picker-close">Close</button>
+    </aside>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Loaded from a CDN (pinned to exact versions) instead of vendored, per project preference.
+       Requires internet access to use the tool — see CLAUDE.md for the trade-off and the
+       gif.js worker exception (browsers block cross-origin Workers; app.js works around it). -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
