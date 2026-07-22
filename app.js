@@ -12,7 +12,11 @@ mermaid.initialize({
     primaryTextColor: "#1c1e23",
     primaryBorderColor: "#00bfb3",
     lineColor: "#8a8f98",
+    edgeLabelBackground: "#ffffff",
     secondaryColor: "#f04e98",
+    clusterBkg: "#ffffff",
+    clusterBorder: "#1c1e23",
+    titleColor: "#1c1e23",
     tertiaryColor: "#fec514",
     fontFamily: "-apple-system, Helvetica Neue, Arial, sans-serif",
     fontSize: "16px",
@@ -48,6 +52,9 @@ const els = {
   docLink: document.getElementById("doc-link"),
   signalFlowSection: document.getElementById("signal-flow-section"),
   signalFlowToggle: document.getElementById("signal-flow-toggle"),
+  tabBar: document.getElementById("tab-bar"),
+  exportFpsGroup: document.getElementById("export-fps-group"),
+  exportCycleGroup: document.getElementById("export-cycle-group"),
   exportProjectBtn: document.getElementById("export-project-btn"),
   importProjectBtn: document.getElementById("import-project-btn"),
   importProjectInput: document.getElementById("import-project-input"),
@@ -182,6 +189,144 @@ let registry = []; // { id, kind, kindIndex, el, wrapper, preset, config, animat
 let selected = null;
 let counter = 0;
 let edgeHitStrokeWidth = 16;
+
+// --- tabs ---
+let tabs = [];        // [{ id, name, source, cycleDuration, tags, signalFlowAll }]
+let activeTabIndex = -1;
+let tabCounter = 0;
+let tabSwitching = false;
+
+function newTabData(name, source) {
+  tabCounter++;
+  return {
+    id: tabCounter,
+    name: name || `Diagram ${tabCounter}`,
+    source: source !== undefined ? source : "flowchart LR\n  A --> B",
+    cycleDuration: 2500,
+    tags: [],
+    signalFlowAll: false,
+  };
+}
+
+function snapshotCurrentTab() {
+  if (activeTabIndex < 0 || !tabs[activeTabIndex]) return;
+  const t = tabs[activeTabIndex];
+  t.source = els.source.value;
+  t.cycleDuration = cycleDuration();
+  t.signalFlowAll = els.signalFlowToggle.checked;
+  t.tags = registry
+    .filter((r) => r.preset !== "none")
+    .map((r) => ({ kind: r.kind, kindIndex: r.kindIndex, preset: r.preset, config: r.config }));
+}
+
+async function activateTab(newIndex) {
+  if (tabSwitching) return;
+  tabSwitching = true;
+  try {
+    snapshotCurrentTab();
+    activeTabIndex = newIndex;
+    const tab = tabs[newIndex];
+
+    els.source.value = tab.source;
+    els.cycleDuration.value = tab.cycleDuration;
+    els.signalFlowToggle.checked = tab.signalFlowAll || false;
+    refreshSourceHighlight();
+    updateDocLink();
+    updateSignalFlowSection();
+
+    // clear live state so renderDiagram starts fresh (no stale previousTags)
+    registry.forEach(clearEntryAnimations);
+    registry = [];
+    selected = null;
+    hidePicker();
+
+    await renderDiagram();
+
+    // apply this tab's saved tags on top of whatever renderDiagram set up
+    (tab.tags || []).forEach((tag) => {
+      const match = registry.find((r) => r.kind === tag.kind && r.kindIndex === tag.kindIndex);
+      if (match) applyPreset(match, tag.preset, tag.config);
+    });
+    renderTagList();
+    renderTabBar();
+  } finally {
+    tabSwitching = false;
+  }
+}
+
+function addTab() {
+  tabs.push(newTabData());
+  activateTab(tabs.length - 1);
+}
+
+function closeTab(index) {
+  if (tabs.length <= 1) {
+    tabs[0] = newTabData("Diagram 1", "flowchart LR\n  A --> B");
+    activeTabIndex = -1;
+    activateTab(0);
+    return;
+  }
+  tabs.splice(index, 1);
+  const next = Math.min(index, tabs.length - 1);
+  activeTabIndex = -1;
+  activateTab(next);
+}
+
+function renderTabBar() {
+  els.tabBar.innerHTML = "";
+
+  tabs.forEach((tab, i) => {
+    const btn = document.createElement("button");
+    btn.className = "tab-btn" + (i === activeTabIndex ? " active" : "");
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "tab-name";
+    nameSpan.textContent = tab.name;
+    nameSpan.title = tab.name;
+    nameSpan.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      const input = document.createElement("input");
+      input.className = "tab-name-input";
+      input.value = tab.name;
+      nameSpan.replaceWith(input);
+      input.focus();
+      input.select();
+      const commit = () => {
+        const name = input.value.trim();
+        if (name) tabs[i].name = name;
+        renderTabBar();
+      };
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+        if (ev.key === "Escape") { input.value = tab.name; input.blur(); }
+      });
+    });
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "tab-close";
+    closeBtn.textContent = "×";
+    closeBtn.title = "Close tab";
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeTab(i);
+    });
+
+    btn.appendChild(nameSpan);
+    btn.appendChild(closeBtn);
+    btn.addEventListener("click", () => {
+      if (i !== activeTabIndex) activateTab(i);
+    });
+    els.tabBar.appendChild(btn);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "tab-add";
+  addBtn.title = "New tab";
+  addBtn.textContent = "+";
+  addBtn.addEventListener("click", addTab);
+  els.tabBar.appendChild(addBtn);
+}
 
 function cycleDuration() {
   return Math.max(200, parseInt(els.cycleDuration.value, 10) || 2500);
@@ -563,9 +708,15 @@ function renderTagList() {
           ${configSummary ? `<span class="tag-config">${configSummary}</span>` : ""}
         </span>
         <span class="tag-preset">${PRESETS[entry.preset].label}</span>
+        <button class="tag-remove" title="Remove animation">×</button>
       `;
       li.style.cursor = "pointer";
       li.addEventListener("click", () => selectEntry(entry));
+      li.querySelector(".tag-remove").addEventListener("click", (e) => {
+        e.stopPropagation();
+        applyPreset(entry, "none", {});
+        renderTagList();
+      });
       els.tagList.appendChild(li);
     });
   }
@@ -760,8 +911,20 @@ async function importProjectFromFile(file) {
 const AUTOSAVE_KEY = "mermaid-animator-autosave";
 
 function saveAutosave() {
+  snapshotCurrentTab();
   try {
-    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(serializeProject()));
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+      kind: "mermaid-animator-tabs",
+      version: 2,
+      activeTab: activeTabIndex,
+      tabs: tabs.map((t) => ({
+        name: t.name,
+        source: t.source,
+        cycleDuration: t.cycleDuration,
+        tags: t.tags,
+        signalFlowAll: t.signalFlowAll || false,
+      })),
+    }));
   } catch (err) {
     // localStorage unavailable/full — silently skip, autosave is a convenience, not a guarantee
   }
@@ -770,7 +933,18 @@ function saveAutosave() {
 function loadAutosave() {
   try {
     const raw = localStorage.getItem(AUTOSAVE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // v2: multi-tab format
+    if (data.kind === "mermaid-animator-tabs" && Array.isArray(data.tabs)) return data;
+    // v1: single-project format — wrap in a single tab
+    if (typeof data.source === "string") {
+      return {
+        activeTab: 0,
+        tabs: [{ name: "Diagram 1", source: data.source, cycleDuration: data.cycleDuration || 2500, tags: data.tags || [], signalFlowAll: false }],
+      };
+    }
+    return null;
   } catch (err) {
     return null;
   }
@@ -873,11 +1047,12 @@ els.canvasWrap.addEventListener(
 
 setZoom(1);
 
-/* Two export engines:
+/* Three export engines:
    - APNG (via UPNG.js, ps=0 i.e. no palette): true 24-bit color + real 8-bit alpha.
      No banding, no chroma-key hacks — this is the sharp/high-quality default.
    - GIF (via gif.js): universal compatibility, but capped at a 256-color palette
-     per frame and binary (not real) transparency, so it's offered as a fallback. */
+     per frame and binary (not real) transparency, so it's offered as a fallback.
+   - PNG: single static frame at t=0, via canvas.toBlob — no animation, no frame loop. */
 async function exportGif() {
   const svg = els.host.querySelector("svg");
   if (!svg) return;
@@ -915,6 +1090,41 @@ async function exportGif() {
   canvas.width = outWidth;
   canvas.height = outHeight;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  if (format === "png") {
+    registry.forEach((r) => (r.animations || []).forEach((a) => (a.animation.currentTime = a.phaseOffset || 0)));
+    await new Promise((r) => requestAnimationFrame(r));
+    const clone = svg.cloneNode(true);
+    registry.forEach((entry) => {
+      (entry.animations || []).forEach((a) => {
+        const targetId = a.target.dataset.animId;
+        if (!targetId) return;
+        const cloneTarget = clone.querySelector(`[data-anim-id="${CSS.escape(targetId)}"]`);
+        if (!cloneTarget) return;
+        const computed = getComputedStyle(a.target);
+        a.bakeProps.forEach((prop) => { cloneTarget.style[prop] = computed[prop]; });
+      });
+    });
+    clone.setAttribute("width", outWidth);
+    clone.setAttribute("height", outHeight);
+    clone.style.width = outWidth + "px";
+    clone.style.height = outHeight + "px";
+    const svgString = new XMLSerializer().serializeToString(clone);
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
+    const img = await loadImage(url);
+    ctx.clearRect(0, 0, outWidth, outHeight);
+    if (!transparent) {
+      ctx.fillStyle = els.canvasWrap.classList.contains("bg-dark") ? "#14161a" : "#ffffff";
+      ctx.fillRect(0, 0, outWidth, outHeight);
+    }
+    ctx.drawImage(img, 0, 0, outWidth, outHeight);
+    canvas.toBlob((blob) => {
+      downloadBlob(blob, `mermaid-${Date.now()}.png`);
+      els.exportStatus.textContent = "Done — PNG downloaded.";
+      finishExport();
+    }, "image/png");
+    return;
+  }
 
   for (let i = 0; i < frameCount; i++) {
     const t = i * frameInterval;
@@ -1036,18 +1246,35 @@ els.exportBtn.addEventListener("click", () => exportGif().catch((err) => {
   els.exportBtn.disabled = false;
 }));
 
-function updateFormatHint() {
+function updateFormatUi() {
+  const fmt = els.exportFormat.value;
+  const animated = fmt !== "png";
+  els.exportFpsGroup.style.display = animated ? "" : "none";
+  els.exportCycleGroup.style.display = animated ? "" : "none";
   els.formatHint.textContent =
-    els.exportFormat.value === "apng"
+    fmt === "apng"
       ? "True color, real alpha transparency. Downloads as .png — works animated in browsers, PowerPoint, and Keynote."
+      : fmt === "png"
+      ? "Single static frame at t=0. True color with real alpha transparency."
       : "256-color palette per frame; transparency is a keyed color, not real alpha, so curved/anti-aliased edges can show faint fringing.";
 }
-els.exportFormat.addEventListener("change", updateFormatHint);
-updateFormatHint();
+els.exportFormat.addEventListener("change", updateFormatUi);
+updateFormatUi();
 
 const autosaved = loadAutosave();
-if (autosaved) {
-  loadProjectData(autosaved).then(() => showToast("Restored your last session"));
+if (autosaved && autosaved.tabs && autosaved.tabs.length > 0) {
+  autosaved.tabs.forEach((t) => {
+    const tab = newTabData(t.name, t.source);
+    tab.cycleDuration = t.cycleDuration || 2500;
+    tab.tags = t.tags || [];
+    tab.signalFlowAll = t.signalFlowAll || false;
+    tabs.push(tab);
+  });
+  activateTab(Math.min(autosaved.activeTab || 0, tabs.length - 1))
+    .then(() => showToast("Restored your last session"));
 } else {
+  tabs.push(newTabData("Diagram 1", els.source.value));
+  activeTabIndex = 0;
+  renderTabBar();
   renderDiagram();
 }

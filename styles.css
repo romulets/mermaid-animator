@@ -45,6 +45,102 @@ html, body {
   margin-bottom: 12px;
 }
 
+.tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 8px;
+}
+
+.tab-bar::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--gray);
+  flex-shrink: 0;
+  max-width: 140px;
+}
+
+.tab-btn:hover {
+  background: var(--border);
+  color: var(--ink);
+}
+
+.tab-btn.active {
+  background: white;
+  border-color: var(--border);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-name-input {
+  width: 80px;
+  font-size: 12px;
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  outline: 1px solid var(--teal);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.tab-close {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--gray);
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.tab-btn:hover .tab-close,
+.tab-btn.active .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  color: var(--pink);
+}
+
+.tab-add {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--gray);
+  flex-shrink: 0;
+}
+
+.tab-add:hover {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
 .icon-btn {
   flex-shrink: 0;
   width: 28px;
@@ -298,6 +394,22 @@ button {
 .tag-list .tag-preset {
   font-weight: 600;
   color: var(--teal);
+}
+
+.tag-list .tag-remove {
+  background: none;
+  border: none;
+  color: var(--gray);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.tag-list .tag-remove:hover {
+  color: var(--pink);
 }
 
 .button-row {
@@ -554,6 +666,15 @@ button {
   border: none;
   color: var(--gray);
   text-align: center;
+}
+
+/* subgraph label: italic black text */
+.cluster-label text,
+.cluster-label .nodeLabel,
+.cluster-label .nodeLabel span {
+  font-style: italic !important;
+  color: #1c1e23 !important;
+  fill: #1c1e23 !important;
 }
 
 /* --- animation presets (live preview via WAAPI, so no @keyframes needed) --- */

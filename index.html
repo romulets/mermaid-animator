@@ -18,6 +18,8 @@
         </button>
       </div>
 
+      <div id="tab-bar" class="tab-bar"></div>
+
       <label class="field-label" for="source">Mermaid source</label>
       <div class="source-editor">
         <pre id="line-numbers" class="line-numbers" aria-hidden="true">1</pre>
@@ -76,6 +78,7 @@ style A2 fill:#0d64dd,color:#FFF,stroke:#000</textarea>
         <select id="export-format">
           <option value="apng" selected>APNG - best quality</option>
           <option value="gif">GIF - max compatibility</option>
+          <option value="png">PNG - static snapshot</option>
         </select>
 
         <div class="field-row">
@@ -83,11 +86,11 @@ style A2 fill:#0d64dd,color:#FFF,stroke:#000</textarea>
             <label class="field-label" for="export-width">Width</label>
             <input id="export-width" type="number" min="100" step="10" value="900" />
           </div>
-          <div class="field-group">
+          <div id="export-fps-group" class="field-group">
             <label class="field-label" for="export-fps">FPS</label>
             <input id="export-fps" type="number" min="5" max="30" step="1" value="20" />
           </div>
-          <div class="field-group">
+          <div id="export-cycle-group" class="field-group">
             <label class="field-label" for="cycle-duration">Cycle (ms)</label>
             <input id="cycle-duration" type="number" min="500" step="100" value="2500" />
           </div>
